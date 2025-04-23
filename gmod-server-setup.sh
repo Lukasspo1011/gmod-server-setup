@@ -4,7 +4,7 @@
 
 # Container erstellen
 echo "Erstelle einen neuen Container..."
-CTID=$(pct create 101 local:vztmpl/debian-12.7-1_amd64.tar.zst -hostname gmod-server -net0 name=eth0,bridge=vmbr0,ip=dhcp -cores 2 -memory 4096 -swap 512 -storage local-lvm -unprivileged 1)
+CTID=$(pct create 111 local:vztmpl/debian-12.7-1_amd64.tar.zst -hostname gmod-server -net0 name=eth0,bridge=vmbr0,ip=dhcp -cores 2 -memory 4096 -swap 512 -storage local-lvm -unprivileged 1)
 
 if [ $? -ne 0 ]; then
   echo "Fehler beim Erstellen des Containers!"
