@@ -1,46 +1,36 @@
 #!/bin/bash
 
-# GMod Server Installations-Skript für Proxmox
+# Schritt 1: System aktualisieren
+echo "Aktualisiere das System..."
+apt update && apt upgrade -y
 
-# Container erstellen
-echo "Erstelle einen neuen Container..."
-CTID=$(pct create 111 local:vztmpl/debian-12.7-1_amd64.tar.zst -hostname gmod-server -net0 name=eth0,bridge=vmbr0,ip=dhcp -cores 2 -memory 4096 -swap 512 -storage local-lvm -unprivileged 1)
+# Schritt 2: Notwendige Pakete installieren
+echo "Installiere notwendige Pakete..."
+apt install -y curl wget git make g++ lib32gcc-s1 lib32stdc++6 lib32tinfo5 lib32z1 screen
 
-if [ $? -ne 0 ]; then
-  echo "Fehler beim Erstellen des Containers!"
-  exit 1
-fi
+# Schritt 3: SteamCMD installieren
+echo "Installiere SteamCMD..."
+mkdir -p /home/steam
+cd /home/steam
+wget https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz
+tar -xvzf steamcmd_linux.tar.gz
+rm steamcmd_linux.tar.gz
 
-echo "Container $CTID wurde erstellt und läuft."
+# Schritt 4: GMod-Server herunterladen und installieren
+echo "Installiere den GMod-Server..."
+./steamcmd.sh +login anonymous +force_install_dir /home/steam/gmod +app_update 4020 validate +quit
 
-# Container starten
-echo "Starte Container $CTID..."
-pct start $CTID
+# Schritt 5: Server konfigurieren
+echo "Konfiguriere den Server..."
+mkdir -p /home/steam/gmod/garrysmod/cfg
+echo 'sv_lan 1' > /home/steam/gmod/garrysmod/cfg/server.cfg
+echo 'host_workshop_collection 0' >> /home/steam/gmod/garrysmod/cfg/server.cfg
+echo 'sv_region 3' >> /home/steam/gmod/garrysmod/cfg/server.cfg
+echo 'sv_cheats 0' >> /home/steam/gmod/garrysmod/cfg/server.cfg
 
-# Warten bis der Container hochgefahren ist
-echo "Warte 10 Sekunden, bis der Container bereit ist..."
-sleep 10
+# Schritt 6: GMod-Server starten
+echo "Starte den GMod-Server..."
+cd /home/steam/gmod
+screen -dmS gmod_server ./srcds_run -game garrysmod +maxplayers 16 +map gm_flatgrass
 
-# Updates und Installationen im Container durchführen
-echo "Updating the system in container $CTID..."
-pct exec $CTID -- apt update && pct exec $CTID -- apt upgrade -y
-
-echo "Installing required packages..."
-pct exec $CTID -- apt install -y curl wget git make g++ lib32gcc-s1 lib32stdc++6 lib32tinfo5 lib32z1
-
-# SteamCMD installieren
-echo "Installing SteamCMD..."
-pct exec $CTID -- mkdir -p /home/steam
-pct exec $CTID -- cd /home/steam && wget https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz
-pct exec $CTID -- cd /home/steam && tar -xvzf steamcmd_linux.tar.gz
-pct exec $CTID -- rm /home/steam/steamcmd_linux.tar.gz
-
-# GMod-Server installieren
-echo "Downloading and installing GMod server..."
-pct exec $CTID -- /home/steam/steamcmd.sh +login anonymous +force_install_dir /home/steam/gmod +app_update 4020 validate +quit
-
-# Konfiguration einrichten
-echo "Setting up server configuration..."
-pct exec $CTID -- mkdir -p /home/steam/gmod/garrysmod/cfg
-pct exec $CTID -- echo 'sv_lan 1' > /home/steam/gmod/garrysmod/cfg/server.cfg
-pct exec $CTID -- echo '
+echo "Der GMod-Server läuft jetzt im Hintergrund!"
